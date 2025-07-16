@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Fingerprinting</title>
+    <meta name="author" content="Jonas Strehle" />
+    <meta name="robots" content="noindex" />
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <link rel="shortcut icon" href="/l/{{favicon}}" type="image/x-icon" />
+    <link
+      href="/assets/refer-v2.css" 
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        font-family: "Inter", sans-serif;
+        background: #0a0a0a;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .scanner-container {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2; /* ensure it’s above our backgrounds */
+      }
+
+      .scanner-outer {
+        width: 100%;
+        height: 100%;
+        border: 2px solid #00ffff;
+        border-radius: 50%;
+        position: relative;
+        animation: outerSpin 8s linear infinite;
+      }
+
+      .scanner-middle {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        border: 1px solid #ff00ff;
+        border-radius: 50%;
+        animation: middleSpin 6s linear infinite reverse;
+      }
+
+      .scanner-inner {
+        position: absolute;
+        top: 40px;
+        left: 40px;
+        right: 40px;
+        bottom: 40px;
+        border: 1px solid #ffff00;
+        border-radius: 50%;
+        animation: innerSpin 4s linear infinite;
+      }
+
+      .scanner-core {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(
+          circle,
+          #00ffff 0%,
+          #ff00ff 50%,
+          #ffff00 100%
+        );
+        border-radius: 50%;
+        animation: corePulse 2s ease-in-out infinite;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 600;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      }
+
+      @keyframes outerSpin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes middleSpin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(-360deg);
+        }
+      }
+
+      @keyframes innerSpin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes corePulse {
+        0%,
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.1);
+          box-shadow: 0 0 40px rgba(255, 0, 255, 0.8);
+        }
+      }
+
+      .scanning-lines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .scan-line {
+        position: absolute;
+        width: 2px;
+        height: 100%;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          #00ffff 50%,
+          transparent 100%
+        );
+        animation: scanRotate 3s linear infinite;
+        transform-origin: center bottom;
+      }
+
+      @keyframes scanRotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-text {
+        position: absolute;
+        bottom: -80px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #00ffff;
+        font-size: 1.2rem;
+        font-weight: 300;
+        text-align: center;
+        animation: textPulse 2s ease-in-out infinite;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      }
+
+      @keyframes textPulse {
+        0%,
+        100% {
+          opacity: 0.7;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .progress-bar {
+        position: absolute;
+        bottom: -120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00);
+        border-radius: 2px;
+        animation: progressLoad 5s ease-out;
+        width: 0%;
+      }
+
+      @keyframes progressLoad {
+        0% {
+          width: 0%;
+        }
+        100% {
+          width: 100%;
+        }
+      }
+
+      .hex-pattern {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(
+            circle at 25% 25%,
+            rgba(0, 255, 255, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 75% 75%,
+            rgba(255, 0, 255, 0.1) 0%,
+            transparent 50%
+          );
+        animation: hexMove 10s ease-in-out infinite;
+        z-index: 1; /* keep it above grid, below scanner content */
+      }
+
+      @keyframes hexMove {
+        0%,
+        100% {
+          transform: scale(1) rotate(0deg);
+        }
+        50% {
+          transform: scale(1.1) rotate(180deg);
+        }
+      }
+
+      .loading-dots {
+        position: absolute;
+        bottom: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+        z-index: 2; /* above grid + particles */
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #00ffff;
+        animation: dotPulse 1.5s ease-in-out infinite;
+      }
+
+      .dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes dotPulse {
+        0%,
+        100% {
+          opacity: 0.3;
+          transform: scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .scanner-container {
+          width: 250px;
+          height: 250px;
+        }
+
+        .scanner-core {
+          width: 80px;
+          height: 80px;
+          font-size: 1.5rem;
+        }
+
+        .status-text {
+          font-size: 1rem;
+        }
+
+        .progress-bar {
+          width: 150px;
+        }
+      }
+
+      /* --------------------------
+         INDEX-LIKE GRID + PARTICLE CSS
+         -------------------------- */
+
+      .grid-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          linear-gradient(rgba(0, 245, 255, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 245, 255, 0.1) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: gridMove 20s linear infinite;
+        z-index: 0;
+      }
+
+      @keyframes gridMove {
+        0% {
+          transform: translate(0, 0);
+        }
+        100% {
+          transform: translate(50px, 50px);
+        }
+      }
+
+      .particle-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .particle {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: linear-gradient(45deg, #00f5ff, #ff00ff);
+        border-radius: 50%;
+        animation: float 20s infinite linear;
+        opacity: 0.7;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translateY(100vh) rotate(0deg);
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100vh) rotate(360deg);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- 1) GRID BACKGROUND -->
+    <div class="grid-background"></div>
+
+    <!-- 2) PARTICLES -->
+    <div class="particle-container" id="particles"></div>
+
+    <!-- 3) Existing hex pattern + scanner content -->
+    <div class="hex-pattern"></div>
+    <div class="scanner-container">
+      <div class="scanner-outer">
+        <div class="scanner-middle">
+          <div class="scanner-inner"></div>
+        </div>
+      </div>
+
+      <div class="scanning-lines">
+        <div class="scan-line"></div>
+      </div>
+
+      <div class="scanner-core">∞</div>
+
+      <div class="status-text">Initializing Scanner...</div>
+
+      <div class="loading-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      const statusTexts = [
+        "Initializing Scanner...",
+        "Analyzing Browser...",
+        "Generating Fingerprint...",
+        "Processing Data...",
+        "Finalizing...",
+      ];
+
+      let currentTextIndex = 0;
+      const statusElement = document.querySelector(".status-text");
+
+      const textInterval = setInterval(() => {
+        currentTextIndex = (currentTextIndex + 1) % statusTexts.length;
+        statusElement.textContent = statusTexts[currentTextIndex];
+      }, 1000);
+
+      window.onload = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const mid = (document.cookie.match(new RegExp(`(^| )mid=([^;]+)`)) || [
+          "",
+          "",
+        ])[2];
+        const route = !!mid ? `/write/${mid}` : "/read";
+        document.cookie
+          .split(";")
+          .forEach((c) => (document.cookie = c.replace(/^ +/, "").replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`)));
+
+        // Wait for the full animation cycle
+        setTimeout(() => {
+          clearInterval(textInterval);
+          window.location.href = route;
+        }, 5000);
+      };
+    </script>
+
+    <!-- 4) Particle spawner script -->
+    <script>
+      function createParticle() {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.left = Math.random() * 100 + "%";
+        p.style.animationDelay = Math.random() * 20 + "s";
+        p.style.animationDuration = (Math.random() * 10 + 15) + "s";
+        document.getElementById("particles").appendChild(p);
+        setTimeout(() => p.remove(), 25000);
+      }
+      setInterval(createParticle, 300);
+    </script>
+  </body>
+</html>

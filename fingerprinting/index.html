@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fingerprint Quantum Renderer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="Advanced browser & canvas fingerprinting demo with real-time animation"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ---------------------------
+       GLOBAL RESET & BASE STYLES
+       --------------------------- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      overflow-x: hidden;
+      position: relative;
+      padding: 2rem;
+    }
+
+    /* ===========================
+       AUDIO FINGERPRINT CARD
+       =========================== */
+    .animated-background {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      background: radial-gradient(circle at 25% 25%, #1a1a2e 0%, transparent 50%),
+                  radial-gradient(circle at 75% 75%, #16213e 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, #0f0f23 0%, transparent 50%);
+      animation: backgroundPulse 8s ease-in-out infinite alternate;
+      overflow: hidden;
+    }
+    @keyframes backgroundPulse {
+      0% { filter: brightness(0.8) hue-rotate(0deg); }
+      100% { filter: brightness(1.2) hue-rotate(10deg); }
+    }
+    .particle {
+      position: absolute; width:4px; height:4px;
+      background: rgba(147,51,234,0.6); border-radius:50%;
+      animation: float 6s ease-in-out infinite;
+    }
+    .particle:nth-child(2){ animation-delay:-1s; background:rgba(59,130,246,0.4); }
+    .particle:nth-child(3){ animation-delay:-2s; background:rgba(236,72,153,0.5); }
+    .particle:nth-child(4){ animation-delay:-3s; background:rgba(16,185,129,0.4); }
+    .particle:nth-child(5){ animation-delay:-4s; background:rgba(245,158,11,0.5); }
+    @keyframes float {
+      0%,100%{ transform:translateY(0) rotate(0); opacity:0.6; }
+      50% { transform:translateY(-100px) rotate(180deg); opacity:1; }
+    }
+    .grid-overlay {
+      position: fixed; top:0; left:0;
+      width:100%; height:100%;
+      background-image:
+        linear-gradient(rgba(147,51,234,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(147,51,234,0.05) 1px, transparent 1px);
+      background-size:60px 60px;
+      z-index:1;
+      animation: gridShift 20s linear infinite;
+    }
+    @keyframes gridShift {
+      0%{ transform:translate(0,0); }
+      100%{ transform:translate(60px,60px); }
+    }
+    #app {
+      position: relative; z-index:10;
+      max-width:1400px; margin:0 auto;
+    }
+    .header {
+      text-align:center; margin-bottom:4rem;
+      position:relative;
+    }
+    .header::before {
+      content:''; position:absolute; top:-50px; left:50%;
+      transform:translateX(-50%);
+      width:200px; height:200px;
+      background:radial-gradient(circle, rgba(147,51,234,0.1) 0%, transparent 70%);
+      border-radius:50%;
+      animation: headerGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes headerGlow {
+      0%{ transform:translateX(-50%) scale(0.8); opacity:0.3; }
+      100%{ transform:translateX(-50%) scale(1.2); opacity:0.8; }
+    }
+    .header h1 {
+      font-size:clamp(2.5rem,5vw,4rem);
+      font-weight:800; margin-bottom:1rem;
+      background: linear-gradient(135deg,#9333ea,#3b82f6,#ec4899);
+      background-size:200% 200%;
+      background-clip:text; -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      animation: gradientShift 4s ease-in-out infinite;
+      position:relative; z-index:2;
+    }
+    @keyframes gradientShift {
+      0%,100%{ background-position:0% 50%; }
+      50%{ background-position:100% 50%; }
+    }
+    .header p {
+      font-size:1.2rem; font-weight:400;
+      color:rgba(255,255,255,0.7);
+      position:relative; z-index:2;
+    }
+    .cards-container { display:flex; flex-direction:column; gap:3rem; }
+
+    .card {
+      position:relative;
+      background:rgba(255,255,255,0.02);
+      backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:24px;
+      padding:3rem;
+      overflow:hidden;
+      transition:all .4s cubic-bezier(.4,0,.2,1);
+      animation:cardEntrance .8s ease-out forwards;
+      opacity:0; transform:translateY(50px);
+    }
+    @keyframes cardEntrance {
+      to { opacity:1; transform:translateY(0); }
+    }
+    .card::before {
+      content:''; position:absolute;
+      top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,
+        rgba(147,51,234,0.8) 0%,
+        rgba(59,130,246,0.8) 50%,
+        rgba(236,72,153,0.8) 100%);
+      animation:topBarPulse 3s ease-in-out infinite;
+    }
+    @keyframes topBarPulse {
+      0%,100%{ opacity:0.6; } 50%{ opacity:1; }
+    }
+    .card::after {
+      content:''; position:absolute;
+      top:-50%; left:-50%; width:200%; height:200%;
+      background:conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(147,51,234,0.05),
+        transparent,
+        rgba(59,130,246,0.05),
+        transparent
+      );
+      animation:rotate 10s linear infinite;
+      z-index:-1;
+    }
+    @keyframes rotate { 100%{ transform:rotate(360deg); } }
+    .card:hover {
+      transform:translateY(-8px) scale(1.02);
+      border-color:rgba(147,51,234,0.3);
+      box-shadow:0 25px 50px rgba(0,0,0,0.3),
+                 0 0 80px rgba(147,51,234,0.1);
+    }
+    .card-header {
+      display:flex; align-items:center; gap:1.5rem;
+      margin-bottom:2.5rem; position:relative; z-index:2;
+    }
+    .card-icon {
+      display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,rgba(147,51,234,0.2),rgba(59,130,246,0.2));
+      border:1px solid rgba(147,51,234,0.3);
+      border-radius:50%;
+      width:60px; height:60px; font-size:1.8rem;
+      position:relative; overflow:hidden; transition:all .4s ease;
+    }
+    .card-icon::before {
+      content:''; position:absolute; top:-50%; left:-50%;
+      width:200%; height:200%;
+      background:linear-gradient(45deg,transparent,rgba(255,255,255,0.1),transparent);
+      transform:rotate(45deg); transition:transform .6s ease;
+    }
+    .card:hover .card-icon::before {
+      transform:rotate(45deg) translate(100%,100%);
+    }
+    .card:hover .card-icon {
+      transform:scale(1.1) rotate(10deg);
+      box-shadow:0 10px 30px rgba(147,51,234,0.3);
+    }
+    .card-title {
+      font-size:1.8rem; font-weight:700;
+      background:linear-gradient(135deg,#ffffff,#e5e7eb);
+      background-clip:text; -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .status-indicator {
+      margin-left:auto; width:12px; height:12px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#10b981,#059669);
+      animation:statusPulse 2s ease-in-out infinite;
+      box-shadow:0 0 10px rgba(16,185,129,0.5);
+    }
+    @keyframes statusPulse {
+      0%,100%{ transform:scale(1); opacity:1; }
+      50%{ transform:scale(1.2); opacity:0.7; }
+    }
+
+    /* AUDIO STEPS & WAVE */
+    .audio-animation-container {
+      display:flex; flex-direction:column; gap:2rem; margin-bottom:2rem;
+    }
+    .audio-step {
+      position:relative;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.05);
+      border-radius:16px;
+      padding:2rem;
+      opacity:0; transform:translateX(-50px) scale(0.9);
+      transition:all .8s cubic-bezier(.4,0,.2,1);
+      overflow:hidden;
+    }
+    .audio-step::before {
+      content:''; position:absolute; top:0; left:-100%;
+      width:100%; height:100%;
+      background:linear-gradient(90deg,transparent,rgba(147,51,234,0.1),transparent);
+      transition:left 1s ease; z-index:1;
+    }
+    .audio-step.active {
+      opacity:1; transform:translateX(0) scale(1);
+      border-color:rgba(147,51,234,0.3);
+      background:rgba(147,51,234,0.05);
+      box-shadow:0 10px 40px rgba(147,51,234,0.1), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .audio-step.active::before { left:100%; }
+    .audio-step.completed {
+      opacity:0.7; border-color:rgba(16,185,129,0.3);
+      background:rgba(16,185,129,0.03);
+    }
+    .step-header {
+      display:flex; align-items:center; gap:1rem;
+      margin-bottom:1.5rem; position:relative; z-index:2;
+    }
+    .step-icon {
+      font-size:2rem; padding:0.8rem; border-radius:50%;
+      background:rgba(255,255,255,0.05); color:#9333ea;
+      width:56px; height:56px; display:flex;
+      align-items:center; justify-content:center;
+      position:relative; overflow:hidden; transition:all .6s ease;
+    }
+    .step-icon::after {
+      content:''; position:absolute; top:-50%; left:-50%;
+      width:200%; height:200%;
+      background:radial-gradient(circle,rgba(147,51,234,0.2) 0%,transparent 70%);
+      transform:scale(0); transition:transform .6s ease;
+    }
+    .audio-step.active .step-icon {
+      color:#fff;
+      background:linear-gradient(135deg,rgba(147,51,234,0.3),rgba(59,130,246,0.3));
+      transform:scale(1.1);
+      animation:iconPulse 2s ease-in-out infinite;
+    }
+    .audio-step.active .step-icon::after { transform:scale(1); }
+    @keyframes iconPulse {
+      0%,100%{ box-shadow:0 0 20px rgba(147,51,234,0.3); }
+      50%{ box-shadow:0 0 40px rgba(147,51,234,0.6); }
+    }
+    .step-content { flex:1; }
+    .step-title {
+      font-size:1.3rem; font-weight:600; color:#fff;
+      margin-bottom:0.5rem;
+    }
+    .step-desc { font-size:0.95rem; color:rgba(255,255,255,0.6); }
+    #wave-canvas {
+      width:100%; height:120px;
+      border:1px solid rgba(147,51,234,0.2);
+      border-radius:12px; background:rgba(0,0,0,0.2);
+      margin:1rem 0; transition:all .4s ease;
+    }
+    .audio-step.active #wave-canvas {
+      border-color:rgba(147,51,234,0.5);
+      box-shadow:0 0 30px rgba(147,51,234,0.2), inset 0 0 20px rgba(147,51,234,0.05);
+      animation:canvasGlow 2s ease-in-out infinite alternate;
+    }
+    @keyframes canvasGlow {
+      0%{ filter:brightness(1); } 100%{ filter:brightness(1.2) saturate(1.3); }
+    }
+    .compressor-viz {
+      display:flex; align-items:center; gap:1rem; margin:1rem 0; padding:1rem;
+      background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.05);
+    }
+    .signal-bar {
+      flex:1; height:8px; background:rgba(255,255,255,0.1);
+      border-radius:4px; overflow:hidden; position:relative;
+    }
+    #signal-input,#signal-output {
+      height:100%; border-radius:4px; transition:all .3s ease;
+    }
+    .audio-step.active #signal-input {
+      background:linear-gradient(90deg,#9333ea,#3b82f6);
+      animation:signalFlow 1.5s ease-in-out infinite alternate;
+      box-shadow:0 0 10px rgba(147,51,234,0.5);
+    }
+    .audio-step.active #signal-output {
+      background:linear-gradient(90deg,#3b82f6,#10b981);
+      animation:signalFlow 1.5s ease-in-out infinite alternate-reverse;
+      box-shadow:0 0 10px rgba(59,130,246,0.5);
+    }
+    @keyframes signalFlow {0%{width:30%;}100%{width:85%;}}
+    .arrow { font-size:1.2rem; color:rgba(255,255,255,0.7); font-weight:bold; }
+    .browser-viz {
+      display:flex; align-items:center; gap:1rem; margin:1rem 0; padding:1rem;
+      background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.05);
+    }
+    .browser-icon { font-size:1.5rem; color:#9333ea; }
+    .processing-dots { display:flex; gap:0.5rem; }
+    .dot { width:8px; height:8px; background:linear-gradient(135deg,#9333ea,#3b82f6); border-radius:50%; animation:dotPulse 1.5s ease-in-out infinite; }
+    .dot:nth-child(2){ animation-delay:0.3s; } .dot:nth-child(3){ animation-delay:0.6s; }
+    @keyframes dotPulse {0%,100%{opacity:0.3;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);} }
+    .result-value {
+      font-size:1.1rem;color:rgba(255,255,255,0.9);font-weight:600;
+      padding:1rem;background:rgba(255,255,255,0.03);border-radius:8px;
+      border:1px solid rgba(255,255,255,0.1);margin:1rem 0;transition:all .4s ease;
+    }
+    .audio-step.active .result-value {
+      background:rgba(147,51,234,0.1);border-color:rgba(147,51,234,0.3);
+      animation:resultReveal 2s ease-out infinite alternate;
+    }
+    @keyframes resultReveal {0%{text-shadow:0 0 10px rgba(147,51,234,0.5);transform:scale(1);}100%{text-shadow:0 0 20px rgba(147,51,234,0.8);transform:scale(1.02);} }
+    .info-row {
+      display:flex; align-items:center; justify-content:space-between;
+      margin:1.5rem 0; padding:1.5rem;
+      background:rgba(255,255,255,0.02);border-radius:12px;
+      border:1px solid rgba(255,255,255,0.08);transition:all .3s ease;
+    }
+    .info-row:hover{ background:rgba(255,255,255,0.04);border-color:rgba(147,51,234,0.2);transform:translateX(5px);}
+    .label { font-weight:600;color:rgba(255,255,255,0.7);font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;min-width:120px; }
+    .value-box {
+      background:rgba(0,0,0,0.3);border:1px solid rgba(147,51,234,0.2);
+      border-radius:8px;padding:0.8rem 1.2rem;font-family:'Monaco','Consolas',monospace;
+      font-size:0.9rem;color:#fff;flex:1;margin-left:1rem;transition:all .3s ease;
+      position:relative;overflow:hidden;
+    }
+    .value-box::before {
+      content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+      background:linear-gradient(90deg,transparent,rgba(147,51,234,0.1),transparent);
+      transition:left .6s ease;
+    }
+    .value-box:hover::before { left:100%; }
+    .fingerprint-reveal { animation:fingerprintReveal 1.5s cubic-bezier(.4,0,.2,1) forwards; }
+    @keyframes fingerprintReveal {0%{opacity:0;transform:translateY(20px) scale(0.9);}50%{background:rgba(147,51,234,0.15);}100%{opacity:1;transform:translateY(0) scale(1);background:rgba(255,255,255,0.02);} }
+    .loading { position:relative; color:rgba(255,255,255,0.7); }
+    .loading::after {
+      content:'';position:absolute;right:-20px;top:50%;transform:translateY(-50%);
+      width:12px;height:12px;border:2px solid transparent;border-top:2px solid #9333ea;border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin {100%{transform:translateY(-50%) rotate(360deg);} }
+
+    /* ===========================
+       CANVAS QUANTUM RENDERER CARD
+       =========================== */
+    .container { max-width:1200px; margin:0 auto; }
+    .canvas-card { background:rgba(255,255,255,0.03);backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,0.1);border-radius:24px;
+      padding:2.5rem;margin:2rem 0;position:relative;overflow:hidden;
+      transition:all .6s cubic-bezier(.23,1,.32,1);
+      box-shadow:0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .canvas-card::before {
+      content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+      background:linear-gradient(90deg,transparent,rgba(59,130,246,0.05),transparent);
+      transition:left 1.5s ease;
+    }
+    .canvas-card:hover::before { left:100%; }
+    .canvas-card:hover {
+      transform:translateY(-8px);
+      border-color:rgba(59,130,246,0.3);
+      box-shadow:0 30px 60px rgba(59,130,246,0.15),
+                 0 0 100px rgba(59,130,246,0.1),
+                 inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .canvas-card .card-header {
+      display:flex; align-items:center; gap:1rem; margin-bottom:2rem; z-index:2;
+    }
+    .canvas-card .card-icon {
+      font-size:2.5rem;
+      background:linear-gradient(135deg,#3b82f6,#10b981);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+      filter:drop-shadow(0 0 20px rgba(59,130,246,0.3));
+    }
+    .canvas-card .card-title {
+      font-size:1.8rem; font-weight:700;
+      background:linear-gradient(135deg,#fff,#a3a3a3);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .canvas-card .status-indicator {
+      width:12px;height:12px;border-radius:50%;background:#10b981;
+      margin-left:auto;animation:pulse 2s infinite;
+      box-shadow:0 0 20px rgba(16,185,129,0.5);
+    }
+    @keyframes pulse {0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.7;transform:scale(1.2);} }
+
+    .canvas-animation-container {
+      display:flex; flex-direction:column; gap:1.5rem; margin-bottom:2rem;
+    }
+    .canvas-step {
+      position:relative; background:rgba(255,255,255,0.01);
+      border:1px solid rgba(255,255,255,0.05);border-radius:16px;
+      padding:1.5rem; opacity:0.3; transform:translateX(-30px) scale(0.95);
+      transition:all .8s cubic-bezier(.4,0,.2,1); overflow:hidden;
+    }
+    .canvas-step::before {
+      content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+      background:linear-gradient(90deg,transparent,rgba(59,130,246,0.08),transparent);
+      transition:left 1.2s ease; z-index:1;
+    }
+    .canvas-step.active {
+      opacity:1; transform:translateX(0) scale(1);
+      border-color:rgba(59,130,246,0.4); background:rgba(59,130,246,0.03);
+      box-shadow:0 10px 30px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .canvas-step.active::before { left:100%; }
+    .canvas-step.completed {
+      opacity:0.6; border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.02);
+    }
+    .canvas-step .step-header {
+      display:flex; align-items:center; gap:1rem; margin-bottom:1rem; z-index:2;
+    }
+    .canvas-step .step-icon {
+      font-size:1.5rem; padding:0.8rem; border-radius:50%;
+      background:rgba(255,255,255,0.05); color:#3b82f6;
+      width:48px; height:48px; display:flex; align-items:center; justify-content:center;
+      position:relative; overflow:hidden; transition:all .6s ease;
+    }
+    .canvas-step .step-icon::after {
+      content:''; position:absolute; top:-50%; left:-50%;
+      width:200%; height:200%;
+      background:radial-gradient(circle,rgba(59,130,246,0.3) 0%,transparent 70%);
+      transform:scale(0); transition:transform .6s ease;
+    }
+    .canvas-step.active .step-icon {
+      color:#fff; background:linear-gradient(135deg,rgba(59,130,246,0.4),rgba(16,185,129,0.4));
+      transform:scale(1.1); box-shadow:0 0 30px rgba(59,130,246,0.4);
+    }
+    .canvas-step.active .step-icon::after { transform:scale(1); }
+    .step-content { flex:1; }
+    .step-title { font-size:1.2rem; font-weight:600; color:#fff; margin-bottom:0.3rem; }
+    .step-desc { font-size:0.9rem; color:rgba(255,255,255,0.6); }
+    .canvas-step canvas {
+      width:100%; height:120px; border:1px solid rgba(59,130,246,0.2);
+      border-radius:12px; background:rgba(0,0,0,0.3); margin:1rem 0; transition:all .4s ease;
+    }
+    .canvas-step.active canvas {
+      border-color:rgba(59,130,246,0.6);
+      box-shadow:0 0 40px rgba(59,130,246,0.25), inset 0 0 20px rgba(59,130,246,0.05);
+      animation:canvasGlow 3s ease-in-out infinite alternate;
+    }
+
+    /* ── CSS OVERRIDE ── */
+    #geometry-canvas {
+      /* override the generic 120px height */
+      height: 200px !important;
+      /* still full width of its container */
+      width: 100% !important;
+    }
+
+    @keyframes canvasGlow { 0%{filter:brightness(1) saturate(1);}100%{filter:brightness(1.3) saturate(1.4);} }
+    .canvas-step .browser-viz {
+      display:flex; align-items:center; justify-content:center; gap:1rem;
+      padding:2rem; background:rgba(0,0,0,0.2); border-radius:12px; margin:1rem 0;
+    }
+    .canvas-step .browser-icon { font-size:2rem; animation:spin 3s linear infinite; }
+    @keyframes spin { from{transform:rotate(0);}to{transform:rotate(360deg);} }
+    .canvas-step .processing-dots { display:flex; gap:0.5rem; }
+    .canvas-step .dot {
+      width:8px; height:8px; border-radius:50%; background:#3b82f6;
+      animation:dotPulse 1.5s ease-in-out infinite;
+    }
+    .canvas-step .dot:nth-child(2){ animation-delay:0.3s; } .canvas-step .dot:nth-child(3){ animation-delay:0.6s; }
+    @keyframes dotPulse {0%,100%{opacity:0.3;transform:scale(1);}50%{opacity:1;transform:scale(1.3);} }
+    .canvas-step .result-value {
+      background:rgba(0,0,0,0.3); border:1px solid rgba(59,130,246,0.3);
+      border-radius:12px; padding:1rem 1.5rem;
+      font-family:'Monaco','Consolas',monospace; font-size:0.95rem;
+      color:#fff; margin:1rem 0; transition:all .4s ease; position:relative; overflow:hidden;
+    }
+    .canvas-step.active .result-value {
+      background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.4);
+      box-shadow:0 0 20px rgba(59,130,246,0.15);
+    }
+
+    .canvas-info-grid { display:flex; flex-direction:column; gap:1rem; margin:1rem 0; }
+    .canvas-info-grid .info-row {
+      display:flex; align-items:center; gap:1rem; padding:1rem;
+      background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.05);
+    }
+    .canvas-info-grid .label { font-weight:600; color:rgba(255,255,255,0.8); min-width:100px; }
+    .canvas-info-grid .value-box, .canvas-info-grid .hash-value {
+      background:rgba(0,0,0,0.3); border:1px solid rgba(59,130,246,0.2);
+      border-radius:8px; padding:0.8rem 1rem; font-family:'Monaco','Consolas',monospace;
+      font-size:0.9rem; color:#fff; flex:1; overflow:hidden; position:relative; transition:all .3s ease;
+    }
+    .canvas-info-grid .hash-value::before {
+      content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+      background:linear-gradient(90deg,transparent,rgba(59,130,246,0.1),transparent);
+      transition:left .6s ease;
+    }
+    .canvas-info-grid .hash-value:hover::before { left:100%; }
+    .canvas-images {
+      display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin:2rem 0;
+      padding:2rem; background:rgba(255,255,255,0.01); border-radius:16px;
+      border:1px solid rgba(255,255,255,0.05);
+    }
+    .canvas-section { text-align:center; }
+    .canvas-section .label {
+      display:block; font-weight:600; color:rgba(255,255,255,0.8); margin-bottom:1rem;
+      font-size:1rem;
+    }
+    .canvas-section div {
+      width:100%; height:150px;
+      background:rgba(0,0,0,0.2);
+      border:2px solid rgba(59,130,246,0.2);
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,0.5);
+      transition:all .4s ease;
+    }
+    .canvas-section div:hover {
+      border-color:rgba(59,130,246,0.5);
+      transform:scale(1.05);
+      box-shadow:0 10px 30px rgba(59,130,246,0.2);
+    }
+    .description {
+      margin-top:2rem; padding:1.5rem;
+      background:rgba(255,255,255,0.02);
+      border-radius:12px; border:1px solid rgba(255,255,255,0.05);
+      color:rgba(255,255,255,0.7); line-height:1.6;
+    }
+    @media(max-width:768px) {
+      body{padding:1rem;}
+      .card,.canvas-card{padding:2rem;}
+      .canvas-images{grid-template-columns:1fr;}
+      .step-header{flex-direction:column;align-items:flex-start;gap:0.5rem;}
+      .info-row{flex-direction:column;align-items:flex-start;gap:1rem;}
+      .value-box,.hash-value{width:100%;margin:0;}
+    }
+    canvas {
+  width: 800px;   /* instead of 100% */
+  height: 120px;  /* matches the intrinsic 800×120 */
+}
+  </style>
+</head>
+
+<body>
+  <div class="animated-background">
+    <div class="particle" style="top:20%;left:10%;animation-duration:8s;"></div>
+    <div class="particle" style="top:60%;left:80%;animation-duration:6s;"></div>
+    <div class="particle" style="top:80%;left:20%;animation-duration:10s;"></div>
+    <div class="particle" style="top:40%;left:60%;animation-duration:7s;"></div>
+    <div class="particle" style="top:10%;left:90%;animation-duration:9s;"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div id="app">
+    <div class="header">
+      <h1>🔮 Browser Fingerprint Analysis</h1>
+      <p>Advanced browser fingerprinting with real-time processing</p>
+    </div>
+
+    <div class="cards-container">
+      <!-- Audio Fingerprint Card -->
+      <div class="card" id="audio-card">
+        <div class="card-header">
+          <span class="card-icon">🎵</span>
+          <span class="card-title">Audio Fingerprint </span>
+          <span class="status-indicator"></span>
+        </div>
+
+        <div class="audio-animation-container" id="audio-animation">
+          <!-- Step: Oscillator -->
+          <div class="audio-step" id="step-oscillator">
+            <div class="step-header">
+              <div class="step-icon">📊</div>
+              <div class="step-content">
+                <div class="step-title">Generate Test Tone</div>
+                <div class="step-desc">Use an OfflineAudioContext to generate a fixed-frequency sine wave.</div>
+              </div>
+            </div>
+            <canvas id="wave-canvas" width="800" height="120"></canvas>
+          </div>
+
+          <!-- Step: Compressor -->
+          <div class="audio-step" id="step-compressor">
+            <div class="step-header">
+              <div class="step-icon">🔧</div>
+              <div class="step-content">
+                <div class="step-title">Apply Dynamics Compressor</div>
+                <div class="step-desc">Pass the tone through a DynamicsCompressorNode to expose per‐device compressor response.</div>
+              </div>
+            </div>
+            <div class="compressor-viz">
+              <div class="signal-bar"><div id="signal-input"></div></div>
+              <div class="arrow">→</div>
+              <div class="signal-bar"><div id="signal-output"></div></div>
+            </div>
+          </div>
+
+          <!-- Step: Browser Processing -->
+          <div class="audio-step" id="step-browser">
+            <div class="step-header">
+              <div class="step-icon">🧠</div>
+              <div class="step-content">
+                <div class="step-title">Capture Processed Buffer</div>
+                <div class="step-desc">Read back the processed audio buffer (sample rate, channel data)</div>
+              </div>
+            </div>
+            <div class="browser-viz">
+              <div class="browser-icon">🔍</div>
+              <div class="processing-dots">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step: Result Animation -->
+          <div class="audio-step" id="step-result">
+            <div class="step-header">
+              <div class="step-icon">⚡</div>
+              <div class="step-content">
+                <div class="step-title">Compute Fingerprint</div>
+                <div class="step-desc">Unique hardware fingerprint extracted from audio processing</div>
+              </div>
+            </div>
+            <div class="result-value" id="animated-audio-value">
+              <span class="loading">Computing Fingerprint...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Audio Value -->
+        <div class="info-row">
+          <span class="label">Fingerprint Value</span>
+          <span class="value-box" id="audio-value">
+            <span class="loading">Analyzing quantum audio matrix...</span>
+          </span>
+        </div>
+
+        <div class="description">
+          We use the Web Audio API’s OfflineAudioContext to synthesize a known waveform, route it through the browser’s compressor, then extract the PCM samples and hash them. Small differences in how each device’s audio stack processes that buffer give us a stable device fingerprint.
+        </div>
+      </div>
+
+      <!-- Canvas Quantum Renderer Card -->
+      <div class="canvas-card" id="canvas-card">
+        <div class="card-header">
+          <span class="card-icon">🎨</span>
+          <span class="card-title">Canvas Fingerprint</span>
+          <span class="status-indicator"></span>
+        </div>
+
+        <div class="canvas-animation-container" id="canvas-animation">
+          <!-- Context Setup Step -->
+          <div class="canvas-step" id="step-context">
+            <div class="step-header">
+              <div class="step-icon">🧱</div>
+              <div class="step-content">
+                <div class="step-title">Initialize Canvas</div>
+                <div class="step-desc">Create a canvas and get its 2D rendering context.</div>
+              </div>
+            </div>
+            <canvas id="context-canvas" width="800" height="120"></canvas>
+          </div>
+
+          <!-- Geometric Rendering Step -->
+          <div class="canvas-step" id="step-geometric">
+            <div class="step-header">
+              <div class="step-icon">📐</div>
+              <div class="step-content">
+                <div class="step-title">Draw Shapes & Gradients</div>
+                <div class="step-desc">Draw text in default and web-loaded fonts to capture font metrics and antialiasing</div>
+              </div>
+            </div>
+            <canvas id="geometry-canvas" width="800" height="120"></canvas>
+          </div>
+
+          <!-- Text Rendering Step -->
+          <div class="canvas-step" id="step-text-rendering">
+            <div class="step-header">
+              <div class="step-icon">📝</div>
+              <div class="step-content">
+                <div class="step-title">Typography Analysis</div>
+                <div class="step-desc">Font signature extraction</div>
+              </div>
+            </div>
+            <canvas id="text-canvas" width="800" height="120"></canvas>
+          </div>
+
+          <!-- Pixel Sampling Step -->
+          <div class="canvas-step" id="step-sampling">
+            <div class="step-header">
+              <div class="step-icon">🔬</div>
+              <div class="step-content">
+                <div class="step-title">Read Pixel Data</div>
+                <div class="step-desc">Call getImageData() to pull back RGBA bytes for each pixel.</div>
+              </div>
+            </div>
+            <div class="browser-viz">
+              <div class="browser-icon">🔬</div>
+              <div class="processing-dots">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hash Generation Step -->
+          <div class="canvas-step" id="step-hash">
+            <div class="step-header">
+              <div class="step-icon">⚡</div>
+              <div class="step-content">
+                <div class="step-title">Generate Hash</div>
+                <div class="step-desc">Combine and hash the pixel byte array for the canvas fingerprint.</div>
+              </div>
+            </div>
+            <div class="result-value" id="canvas-result-value">
+              <span class="loading">Computing Fingerprint...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Canvas Info Grid -->
+        <div class="canvas-info-grid">
+          <div class="info-row">
+            <span class="label">Winding:</span>
+            <span class="value-box" id="canvas-winding">
+              <span class="loading">Testing winding...</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="label">Fingerprint:</span>
+            <span class="hash-value" id="canvas-hash">
+              <span class="loading">Generating Fingerprint signature...</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="description">
+          Canvas fingerprinting draws a series of shapes and text onto an offscreen canvas, then reads back the pixel buffer. Sub-pixel antialiasing, font rendering quirks, and GPU driver differences produce small variations that we fold into a hash.        </div>
+      </div>
+
+<!-- Enhanced WebGL System Card -->
+<div class="card enhanced-data-card" id="webgl-basics-card">
+  <div class="card-header">
+    <span class="card-icon">🌐</span>
+    <span class="card-title">WebGL System Architecture</span>
+    <span class="status-indicator"></span>
+  </div>
+  
+  <div class="data-animation-container">
+    <div class="data-step active" id="webgl-step">
+      <div class="step-header">
+        <div class="step-icon">🔍</div>
+        <div class="step-content">
+          <div class="step-title">Query WebGL Parameters</div>
+          <div class="step-desc">Analysis of GPU architecture and WebGL implementation</div>
+        </div>
+      </div>
+      
+      <div class="data-visualization">
+        <canvas id="webgl-viz-canvas" width="800" height="120"></canvas>
+      </div>
+      
+      <div class="processing-status">
+        <div class="browser-viz">
+          <div class="browser-icon">🧠</div>
+          <div class="processing-dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+          <span class="process-label">Analyzing WebGL Capabilities...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="data-output-container">
+    <div class="output-header">
+      <span class="output-icon">📊</span>
+      <span class="output-title">System Capabilities Matrix</span>
+    </div>
+    <pre class="data-display" id="webgl-basics-json">
+      <span class="loading">Querying WebGL architecture...</span>
+    </pre>
+    <div class="info-row">
+      <span class="label">Fingerprint:</span>
+      <span class="hash-value" id="webgl-basics-hash">
+        <span class="loading">Computing Fingerprint signature...</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="description">
+    By instantiating a WebGL context and querying its parameters, we collect GPU vendor/renderer strings and capabilities. Differences in GPU hardware and driver implementations yield a unique profile.  </div>
+</div>
+
+<!-- Enhanced WebGL Extensions Card -->
+<div class="card enhanced-data-card" id="webgl-extensions-card">
+  <div class="card-header">
+    <span class="card-icon">🔌</span>
+    <span class="card-title">WebGL Extensions</span>
+    <span class="status-indicator"></span>
+  </div>
+  
+  <div class="data-animation-container">
+    <div class="data-step active" id="extensions-step">
+      <div class="step-header">
+        <div class="step-icon">⚡</div>
+        <div class="step-content">
+          <div class="step-title">Enumerate Extensions</div>
+          <div class="step-desc">Call getSupportedExtensions() to list all supported WebGL extensions, and read key parameters (e.g. anisotropy levels)</div>
+        </div>
+      </div>
+      
+      <div class="data-visualization">
+        <canvas id="extensions-viz-canvas" width="800" height="120"></canvas>
+      </div>
+      
+      <div class="processing-status">
+        <div class="browser-viz">
+          <div class="browser-icon">🔍</div>
+          <div class="processing-dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+          <span class="process-label">Scanning Extension Ecosystem...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="data-output-container">
+    <div class="output-header">
+      <span class="output-icon">🧩</span>
+      <span class="output-title">Extension Fingerprint Database</span>
+    </div>
+    <pre class="data-display" id="webgl-extensions-json">
+      <span class="loading">Enumerating WebGL neural extensions...</span>
+    </pre>
+    <div class="info-row">
+      <span class="label">Fingerprint:</span>
+      <span class="hash-value" id="webgl-extensions-hash">
+        <span class="loading">Generating extension Fingerprint...</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="description">
+    Each GPU and driver combination supports a slightly different set of WebGL extensions (and may implement them to varying degrees). We use that extension matrix as part of the fingerprint.  </div>
+</div>
+
+<!-- Enhanced Mathematical Precision Card -->
+<div class="card enhanced-data-card" id="math-card">
+  <div class="card-header">
+    <span class="card-icon">🧮</span>
+    <span class="card-title">Mathematical Precision Engine</span>
+    <span class="status-indicator"></span>
+  </div>
+  
+  <div class="data-animation-container">
+    <div class="data-step active" id="math-step">
+      <div class="step-header">
+        <div class="step-icon">∞</div>
+        <div class="step-content">
+          <div class="step-title">Floating-Point Operations</div>
+          <div class="step-desc">Perform a series of Math operations (sin, cos, sqrt, pow) in varying orders and measure the outputs.</div>
+        </div>
+      </div>
+      
+      <div class="data-visualization">
+        <canvas id="math-viz-canvas" width="800" height="120"></canvas>
+      </div>
+      
+      <div class="processing-status">
+        <div class="browser-viz">
+          <div class="browser-icon">🔬</div>
+          <div class="processing-dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+          <span class="process-label">Computing Fingerprints...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="data-output-container">
+    <div class="output-header">
+      <span class="output-icon">📐</span>
+      <span class="output-title">Analysis Results</span>
+    </div>
+    <pre class="data-display" id="math-json">
+      <span class="loading">Computing mathematical fingerprints...</span>
+    </pre>
+    <div class="info-row">
+      <span class="label">Fingerprints:</span>
+      <span class="hash-value" id="math-hash">
+        <span class="loading">Calculating precision fingerprints...</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="description">
+    Different CPUs and JS engines handle floating-point rounding and instruction precision differently. By running a small battery of math operations and capturing the results, we build a fingerprint based on those tiny algorithmic differences.  </div>
+</div>
+
+  <style>
+/* ===========================
+   ENHANCED DATA CARDS STYLES
+   =========================== */
+.enhanced-data-card {
+  position: relative;
+  background: rgba(255,255,255,0.025);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: 3rem;
+  overflow: hidden;
+  transition: all .5s cubic-bezier(.4,0,.2,1);
+  animation: cardEntrance .8s ease-out forwards;
+  opacity: 0;
+  transform: translateY(50px);
+}
+
+.enhanced-data-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    rgba(16,185,129,0.8) 0%,
+    rgba(59,130,246,0.8) 50%,
+    rgba(147,51,234,0.8) 100%);
+  animation: topBarPulse 4s ease-in-out infinite;
+}
+
+.enhanced-data-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    rgba(16,185,129,0.03),
+    transparent,
+    rgba(59,130,246,0.03),
+    transparent,
+    rgba(147,51,234,0.03),
+    transparent
+  );
+  animation: rotate 15s linear infinite;
+  z-index: -1;
+}
+
+.enhanced-data-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  border-color: rgba(16,185,129,0.3);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4),
+              0 0 100px rgba(16,185,129,0.1);
+}
+
+.data-animation-container {
+  margin-bottom: 2.5rem;
+}
+
+.data-step {
+  position: relative;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 2rem;
+  transition: all .6s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+
+.data-step::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(16,185,129,0.08),
+    transparent);
+  transition: left 1.5s ease;
+  z-index: 1;
+}
+
+.data-step.active {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.04);
+  box-shadow: 0 15px 40px rgba(16,185,129,0.15),
+              inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.data-step.active::before {
+  left: 100%;
+}
+
+.data-step .step-icon {
+  font-size: 1.8rem;
+  padding: 1rem;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  color: #10b981;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: all .6s ease;
+}
+
+.data-step .step-icon::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(16,185,129,0.25) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform .6s ease;
+}
+
+.data-step.active .step-icon {
+  color: #fff;
+  background: linear-gradient(135deg,
+    rgba(16,185,129,0.4),
+    rgba(59,130,246,0.4));
+  transform: scale(1.1);
+  box-shadow: 0 0 30px rgba(16,185,129,0.4);
+  animation: iconPulse 2.5s ease-in-out infinite;
+}
+
+.data-step.active .step-icon::after {
+  transform: scale(1);
+}
+
+.data-visualization {
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.data-visualization canvas {
+  width: 100%;
+  height: 120px;
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.3);
+  transition: all .4s ease;
+}
+
+.data-step.active .data-visualization canvas {
+  border-color: rgba(16,185,129,0.6);
+  box-shadow: 0 0 40px rgba(16,185,129,0.25),
+              inset 0 0 20px rgba(16,185,129,0.05);
+  animation: canvasGlow 3s ease-in-out infinite alternate;
+}
+
+.processing-status {
+  margin: 1.5rem 0;
+}
+
+.process-label {
+  color: rgba(255,255,255,0.8);
+  font-weight: 500;
+  margin-left: 1rem;
+}
+
+.data-output-container {
+  position: relative;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.data-output-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    rgba(16,185,129,0.6),
+    rgba(59,130,246,0.6));
+  opacity: 0.8;
+}
+
+.output-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.output-icon {
+  font-size: 1.5rem;
+  color: #10b981;
+  filter: drop-shadow(0 0 10px rgba(16,185,129,0.5));
+}
+
+.output-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+
+.data-display {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.85);
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  position: relative;
+  transition: all .4s ease;
+}
+
+.data-display::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(16,185,129,0.1),
+    transparent);
+  transition: left .8s ease;
+}
+
+.data-display:hover::before {
+  left: 100%;
+}
+
+.data-display:hover {
+  border-color: rgba(16,185,129,0.4);
+  box-shadow: 0 0 20px rgba(16,185,129,0.1);
+}
+
+/* Custom scrollbar for data display */
+.data-display::-webkit-scrollbar {
+  width: 6px;
+}
+
+.data-display::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.data-display::-webkit-scrollbar-thumb {
+  background: rgba(16,185,129,0.3);
+  border-radius: 3px;
+}
+
+.data-display::-webkit-scrollbar-thumb:hover {
+  background: rgba(16,185,129,0.5);
+}
+
+/* Enhance the hash values */
+.enhanced-data-card .hash-value {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.9rem;
+  color: #fff;
+  flex: 1;
+  margin-left: 1rem;
+  transition: all .4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-data-card .hash-value::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(16,185,129,0.15),
+    transparent);
+  transition: left .8s ease;
+}
+
+.enhanced-data-card .hash-value:hover::before {
+  left: 100%;
+}
+
+.enhanced-data-card .hash-value:hover {
+  border-color: rgba(16,185,129,0.5);
+  box-shadow: 0 0 25px rgba(16,185,129,0.2);
+  transform: scale(1.02);
+}
+
+/* Responsive design */
+@media(max-width: 768px) {
+  .enhanced-data-card {
+    padding: 2rem;
+  }
+  
+  .data-output-container {
+    padding: 1.5rem;
+  }
+  
+  .data-display {
+    font-size: 0.8rem;
+    padding: 1rem;
+  }
+}
+  </style>
+    </div>
+  </div>
+
+<script>
+  // ——— Helper to match canvas buffer to CSS size ———
+  function fixCanvas(c) {
+    const rect = c.getBoundingClientRect();
+    const dpr  = window.devicePixelRatio || 1;
+    // resize drawing buffer
+    c.width  = rect.width * dpr;
+    c.height = rect.height * dpr;
+    // scale context so CSS pixels = drawing units
+    const cc = c.getContext('2d');
+    cc.scale(dpr, dpr);
+  }
+
+  // ——— AUDIO card animations & step sequencing ———
+  let currentStep = 0;
+  const steps = ['step-oscillator','step-compressor','step-browser','step-result'];
+  const canvas = document.getElementById('wave-canvas');
+  const ctx    = canvas.getContext('2d');
+  let   waveId;
+
+  function drawWave() {
+    const w = canvas.width, h = canvas.height, cy = h/2;
+    ctx.clearRect(0, 0, w, h);
+    const t = Date.now() * 0.002;
+    // ── Main wave ──
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(147,51,234,0.8)';
+    ctx.lineWidth   = 3;
+    for (let x = 0; x < w; x++) {
+      const y = cy
+        + Math.sin(x * 0.02 + t) * 30
+        + Math.sin(x * 0.01 + t * 1.5) * 15;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // ── Secondary wave ──
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(59,130,246,0.6)';
+    ctx.lineWidth   = 2;
+    for (let x = 0; x < w; x++) {
+      const y = cy
+        + Math.cos(x * 0.015 + t * 0.8) * 20
+        + Math.sin(x * 0.025 + t * 2) * 10;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // ── Tertiary wave ──
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(236,72,153,0.4)';
+    ctx.lineWidth   = 1.5;
+    for (let x = 0; x < w; x++) {
+      const y = cy + Math.sin(x * 0.03 + t * 1.2) * 12;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    waveId = requestAnimationFrame(drawWave);
+  }
+
+  function startFingerprinting() {
+    drawWave();
+    function activate(i) {
+      if (i < steps.length) {
+        steps.forEach((s, j) => {
+          const el = document.getElementById(s);
+          if      (j < i) el.classList.add('completed'), el.classList.remove('active');
+          else if (j === i) el.classList.add('active'), el.classList.remove('completed');
+          else el.classList.remove('active','completed');
+        });
+        setTimeout(() => activate(i + 1), 3000);
+      } else {
+        setTimeout(() => {
+          steps.forEach(s => document.getElementById(s)
+                                .classList.remove('active','completed'));
+          document.getElementById('audio-card')
+                  .classList.remove('audio-card-complete');
+          setTimeout(() => activate(0), 1000);
+        }, 5000);
+      }
+    }
+    setTimeout(() => activate(0), 1000);
+  }
+
+  // ——— CANVAS card animations & step sequencing ———
+  const cSteps = [
+    'step-context',
+    'step-geometric',
+    'step-text-rendering',
+    'step-sampling',
+    'step-hash'
+  ];
+
+  function startCanvasFingerprinting() {
+    function act(i) {
+      if (i < cSteps.length) {
+        cSteps.forEach((s, j) => {
+          const el = document.getElementById(s);
+          if      (j < i) el.classList.add('completed'), el.classList.remove('active');
+          else if (j === i) {
+            el.classList.add('active');
+            el.classList.remove('completed');
+            if (s === 'step-context')       animateContextCanvas();
+            if (s === 'step-geometric')     animateGeometryCanvas();
+            if (s === 'step-text-rendering') animateTextCanvas();
+            if (s === 'step-hash')          showFinalResults();
+          } else {
+            el.classList.remove('active','completed');
+          }
+        });
+        setTimeout(() => act(i + 1), 3500);
+      } else {
+        setTimeout(() => {
+          cSteps.forEach(s => document.getElementById(s)
+                                    .classList.remove('active','completed'));
+          resetResults();
+          setTimeout(() => act(0), 1000);
+        }, 6000);
+      }
+    }
+    setTimeout(() => act(0), 1000);
+  }
+
+  function animateContextCanvas() {
+    const c    = document.getElementById('context-canvas'),
+          fctx = c.getContext('2d');
+    let frame = 0;
+    (function draw() {
+      fctx.clearRect(0, 0, c.width, c.height);
+      const t = frame * 0.05;
+      fctx.strokeStyle = `rgba(59,130,246,${0.4 + Math.sin(t) * 0.3})`;
+      fctx.lineWidth   = 1;
+      fctx.shadowColor = 'rgba(59,130,246,0.5)';
+      fctx.shadowBlur  = 5;
+      for (let x = 0; x < c.width; x += 40) {
+        const o = Math.sin(t + x * 0.01) * 10;
+        fctx.beginPath(); fctx.moveTo(x, o); fctx.lineTo(x, c.height - o); fctx.stroke();
+      }
+      for (let y = 0; y < c.height; y += 30) {
+        const o = Math.cos(t + y * 0.01) * 15;
+        fctx.beginPath(); fctx.moveTo(o, y); fctx.lineTo(c.width - o, y); fctx.stroke();
+      }
+      if (frame < 120) requestAnimationFrame(draw);
+      frame++;
+    })();
+  }
+
+  function animateGeometryCanvas() {
+    const c    = document.getElementById('geometry-canvas'),
+          gctx = c.getContext('2d');
+    let frame = 0;
+    (function draw() {
+      gctx.clearRect(0, 0, c.width, c.height);
+      const cx = c.width / 2,
+            cy = c.height / 2,
+            t  = frame * 0.03;
+      for (let L = 0; L < 3; L++) {
+        const R = 30 + L * 20,
+              S = 6  + L * 2;
+        for (let i = 0; i < S; i++) {
+          const a = (i * 2 * Math.PI / S) + t * (1 + L * 0.5),
+                x = cx + Math.cos(a) * R,
+                y = cy + Math.sin(a) * R;
+          gctx.beginPath();
+          gctx.arc(x, y, 3 + Math.sin(t + i) * 2, 0, 2 * Math.PI);
+          const hue = (210 + L * 30 + i * 20 + t * 50) % 360;
+          gctx.fillStyle   = `hsl(${hue},70%,60%)`;
+          gctx.shadowColor = `hsl(${hue},70%,60%)`;
+          gctx.shadowBlur  = 10;
+          gctx.fill();
+          if (i > 0) {
+            const pa = ((i - 1) * 2 * Math.PI / S) + t * (1 + L * 0.5),
+                  px = cx + Math.cos(pa) * R,
+                  py = cy + Math.sin(pa) * R;
+            gctx.beginPath();
+            gctx.moveTo(px, py);
+            gctx.lineTo(x, y);
+            gctx.strokeStyle = `hsla(${hue},70%,60%,0.3)`;
+            gctx.lineWidth   = 1;
+            gctx.stroke();
+          }
+        }
+      }
+      if (frame < 120) requestAnimationFrame(draw);
+      frame++;
+    })();
+  }
+
+  function animateTextCanvas() {
+    const c     = document.getElementById('text-canvas'),
+          tctx  = c.getContext('2d'),
+          texts = ['NEURAL','QUANTUM','MATRIX','DNA'];
+    let frame = 0;
+    (function draw() {
+      tctx.clearRect(0, 0, c.width, c.height);
+      const t = frame * 0.05;
+      texts.forEach((txt, i) => {
+        const x     = (c.width / texts.length) * i + c.width / (texts.length * 2),
+              y     = c.height / 2 + Math.sin(t - i * 0.5) * 10,
+              alpha = 0.5 + Math.sin(t - i * 0.3) * 0.4,
+              scale = 0.8 + Math.sin(t - i * 0.2) * 0.2;
+        tctx.save();
+        tctx.translate(x, y);
+        tctx.scale(scale, scale);
+        tctx.font         = 'bold 16px Inter, sans-serif';
+        tctx.fillStyle    = `rgba(59,130,246,${alpha})`;
+        tctx.shadowColor  = 'rgba(59,130,246,0.8)';
+        tctx.shadowBlur   = 15;
+        tctx.textAlign    = 'center';
+        tctx.fillText(txt, 0, 0);
+        tctx.strokeStyle  = `rgba(255,255,255,${alpha * 0.5})`;
+        tctx.lineWidth    = 1;
+        tctx.strokeText(txt, 0, 0);
+        tctx.restore();
+      });
+      if (frame < 120) requestAnimationFrame(draw);
+      frame++;
+    })();
+  }
+
+  function showFinalResults() {
+    setTimeout(() => {
+      // these will be overwritten by main.ts
+      document.getElementById('canvas-result-value').textContent = '…';
+      document.getElementById('canvas-winding')     .textContent = '…';
+      document.getElementById('canvas-hash')        .textContent = '…';
+    }, 1000);
+  }
+
+  function resetResults() {
+    document.getElementById('canvas-result-value').innerHTML = '<span class="loading">Computing neural signature...</span>';
+    document.getElementById('canvas-winding')     .innerHTML = '<span class="loading">Testing quantum winding...</span>';
+    document.getElementById('canvas-hash')        .innerHTML = '<span class="loading">Generating biometric signature...</span>';
+  }
+
+  // ——— Initialize on page load ———
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1) Fix every <canvas> resolution
+    document.querySelectorAll('canvas').forEach(fixCanvas);
+
+    // 2) Start audio fingerprint simulation
+    setTimeout(startFingerprinting, 1500);
+
+    // 3) Animate compressor bars
+    setInterval(() => {
+      document.getElementById('signal-input').style.width  = (30 + Math.random()*55) + '%';
+      document.getElementById('signal-output').style.width = (30 + Math.random()*55) + '%';
+    }, 800);
+
+    // 4) Pulse the status LED
+    const si = document.querySelector('.status-indicator');
+    setInterval(() => {
+      si.style.boxShadow = '0 0 20px rgba(16,185,129,0.8)';
+      setTimeout(() => si.style.boxShadow = '0 0 10px rgba(16,185,129,0.5)', 300);
+    }, 2000);
+
+    // 5) Start canvas fingerprint simulation
+    setTimeout(startCanvasFingerprinting, 1500);
+  });
+</script>
+<script>
+// Enhanced canvas animations for WebGL and Math cards
+function animateWebGLCanvas() {
+  const canvas = document.getElementById('webgl-viz-canvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = frame * 0.04;
+    
+    // Draw GPU processing visualization
+    ctx.strokeStyle = 'rgba(16,185,129,0.8)';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(16,185,129,0.6)';
+    ctx.shadowBlur = 8;
+    
+    // Draw processing waves
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.beginPath();
+      const opacity = 0.6 - layer * 0.15;
+      ctx.strokeStyle = `rgba(16,185,129,${opacity})`;
+      
+      for (let x = 0; x < canvas.width; x += 2) {
+        const y = canvas.height/2 + 
+          Math.sin(x * 0.02 + t + layer * 0.5) * (20 - layer * 5) +
+          Math.cos(x * 0.01 + t * 1.2) * (10 - layer * 2);
+        
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    
+    // Draw data points
+    for (let i = 0; i < 8; i++) {
+      const x = (canvas.width / 8) * i + (canvas.width / 16);
+      const y = canvas.height/2 + Math.sin(t + i * 0.8) * 25;
+      const size = 3 + Math.sin(t + i) * 2;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(59,130,246,${0.7 + Math.sin(t + i) * 0.3})`;
+      ctx.fill();
+    }
+    
+    if (frame < 300) {
+      requestAnimationFrame(draw);
+      frame++;
+    } else {
+      setTimeout(() => {
+        frame = 0;
+        animateWebGLCanvas();
+      }, 2000);
+    }
+  }
+  
+  draw();
+}
+
+function animateExtensionsCanvas() {
+  const canvas = document.getElementById('extensions-viz-canvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = frame * 0.03;
+    
+    // Draw extension nodes network
+    const nodes = 12;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 40;
+    
+    // Draw connections
+    ctx.strokeStyle = 'rgba(147,51,234,0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < nodes; i++) {
+      for (let j = i + 1; j < nodes; j++) {
+        if (Math.random() > 0.7) {
+          const angle1 = (i / nodes) * Math.PI * 2 + t * 0.5;
+          const angle2 = (j / nodes) * Math.PI * 2 + t * 0.5;
+          const x1 = centerX + Math.cos(angle1) * radius;
+          const y1 = centerY + Math.sin(angle1) * radius;
+          const x2 = centerX + Math.cos(angle2) * radius;
+          const y2 = centerY + Math.sin(angle2) * radius;
+          
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // Draw nodes
+    for (let i = 0; i < nodes; i++) {
+      const angle = (i / nodes) * Math.PI * 2 + t * 0.5;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      const size = 4 + Math.sin(t + i * 0.5) * 2;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      const hue = (260 + i * 20 + t * 30) % 360;
+      ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+    }
+    
+    if (frame < 300) {
+      requestAnimationFrame(draw);
+      frame++;
+    } else {
+      setTimeout(() => {
+        frame = 0;
+        animateExtensionsCanvas();
+      }, 2000);
+    }
+  }
+  
+  draw();
+}
+
+function animateMathCanvas() {
+  const canvas = document.getElementById('math-viz-canvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+  
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = frame * 0.05;
+    
+    // Draw mathematical precision visualization
+    ctx.strokeStyle = 'rgba(236,72,153,0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(236,72,153,0.5)';
+    ctx.shadowBlur = 6;
+    
+    // Draw precision curves
+    for (let curve = 0; curve < 4; curve++) {
+      ctx.beginPath();
+      const phase = curve * Math.PI / 2;
+      const amplitude = 15 + curve * 5;
+      const frequency = 0.015 + curve * 0.005;
+      const opacity = 0.8 - curve * 0.15;
+      
+      ctx.strokeStyle = `rgba(236,72,153,${opacity})`;
+      
+      for (let x = 0; x < canvas.width; x += 1) {
+        const y = canvas.height/2 + 
+          Math.sin(x * frequency + t + phase) * amplitude +
+          Math.cos(x * frequency * 1.618 + t * 0.8) * (amplitude * 0.5);
+        
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    
+    // Draw floating point precision markers
+    for (let i = 0; i < 16; i++) {
+      const x = (i / 15) * canvas.width;
+      const precision = Math.sin(t + i * 0.3) * 0.5 + 0.5;
+      const y = canvas.height * (0.2 + precision * 0.6);
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + precision * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(245,158,11,${0.6 + precision * 0.4})`;
+      ctx.shadowColor = 'rgba(245,158,11,0.8)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+    }
+    
+    if (frame < 300) {
+      requestAnimationFrame(draw);
+      frame++;
+    } else {
+      setTimeout(() => {
+        frame = 0;
+        animateMathCanvas();
+      }, 2000);
+    }
+  }
+  
+  draw();
+}
+
+// Start animations when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Start canvas animations with delays
+  setTimeout(animateWebGLCanvas, 2000);
+  setTimeout(animateExtensionsCanvas, 2500);
+  setTimeout(animateMathCanvas, 3000);
+});
+</script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

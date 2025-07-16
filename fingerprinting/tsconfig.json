@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    /* Target & Libraries */
+    "target": "ES2020",                       // match modern‐browser code (needed for Web Audio, Canvas, etc.)
+    "lib": ["ES2020", "DOM", "DOM.Iterable"], // include DOM APIs like OfflineAudioContext, HTMLCanvasElement
+
+    /* Emit & Modules (Bundler mode) */
+    "module": "ESNext",
+    "moduleResolution": "bundler",            // let Vite/Rollup handle imports
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "force",
+    "noEmit": true,                           // we’re letting Vite/Rollup do the actual build
+
+    /* Strictness & Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true,                     // skip checking .d.ts from node_modules, etc.
+
+    /* Original flags you had */
+    "removeComments": false,
+    "resolveJsonModule": true,
+    "importHelpers": true,
+    "noErrorTruncation": true,
+
+    /* Class‐fields & Helpers */
+    "useDefineForClassFields": true,
+
+    /* Types (e.g. for jasmine tests, if you have them) */
+    "types": ["jasmine"]
+  },
+
+  /* Include everything under src/ so Rollup/Vite sees it */
+  "include": ["src"]
+}

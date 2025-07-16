@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Fingerprinting {{hash}}</title>
+        <meta name="author" content="Jonas Strehle"/>
+        <meta name="robots" content="noindex"/>
+        <meta name="viewport" content="viewport-fit=cover, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="/assets/material.css" rel="stylesheet">
+        <link href="/assets/jetbrains.css" rel="stylesheet">
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html, body {
+                height: 100%;
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+                color: white;
+                overflow: hidden;
+            }
+
+            .grid-background {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: 
+                    linear-gradient(rgba(0, 245, 255, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 245, 255, 0.1) 1px, transparent 1px);
+                background-size: 50px 50px;
+                animation: gridMove 20s linear infinite;
+                z-index: 0;
+            }
+
+            @keyframes gridMove {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(50px, 50px); }
+            }
+
+            .particle-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .particle {
+                position: absolute;
+                width: 2px;
+                height: 2px;
+                background: linear-gradient(45deg, #00f5ff, #ff00ff);
+                border-radius: 50%;
+                animation: float 20s infinite linear;
+                opacity: 0.7;
+            }
+
+            @keyframes float {
+                0% {
+                    transform: translateY(100vh) rotate(0deg);
+                    opacity: 0;
+                }
+                10%, 90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-100vh) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+
+            .container {
+                position: relative;
+                z-index: 2;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .main-card {
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                width: 100%;
+                text-align: center;
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            }
+
+            .identity-bubble {
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 15px;
+                padding: 25px;
+                margin: 30px 0;
+            }
+
+            .identity-text {
+                font-size: 1.2rem;
+                margin-bottom: 15px;
+            }
+
+            .identity-hash {
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 1.3rem;
+                font-weight: 600;
+                color: #ff6b6b;
+                background: rgba(255, 107, 107, 0.1);
+                padding: 12px 20px;
+                border-radius: 10px;
+                border: 2px solid rgba(255, 107, 107, 0.3);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                user-select: text;
+                word-break: break-all;
+            }
+
+            .identity-hash:hover {
+                transform: scale(1.03);
+                background: rgba(255, 107, 107, 0.2);
+            }
+
+            .identifier-small {
+                margin-top: 10px;
+                font-size: 0.85rem;
+                color: rgba(255, 255, 255, 0.6);
+            }
+
+            .button-grid {
+                margin-top: 30px;
+            }
+
+            .action-btn {
+                background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+                background-size: 300% 300%;
+                color: white;
+                padding: 15px 25px;
+                border: none;
+                border-radius: 30px;
+                text-decoration: none;
+                font-weight: bold;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                transition: 0.3s ease;
+                animation: buttonPulse 2s ease-in-out infinite;
+            }
+
+            .action-btn:hover {
+                transform: translateY(-3px);
+                animation: none;
+                box-shadow: 0 10px 25px rgba(255, 0, 110, 0.5);
+            }
+
+            @keyframes buttonPulse {
+                0%, 100% {
+                    transform: translateY(0);
+                    box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+                }
+                50% {
+                    transform: translateY(-2px);
+                    box-shadow: 0 15px 40px rgba(255, 0, 110, 0.5);
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="grid-background"></div>
+        <div class="particle-container" id="particles"></div>
+
+        <div class="container">
+            <div class="main-card">
+                <div class="identity-bubble">
+                    <div class="identity-text">Your unique identifier:</div>
+                    <div class="identity-hash" onclick="window.getSelection().selectAllChildren(this); document.execCommand('copy');">
+                        {{hash}}
+                    </div>
+                    <div class="identifier-small">({{identifier}})</div>
+                </div>
+
+                <div class="button-grid">
+                    <a class="action-btn" href="/">
+                        <span class="material-icons">refresh</span>
+                        Try Again
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Particle effect
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+                document.getElementById('particles').appendChild(particle);
+
+                setTimeout(() => {
+                    particle.remove();
+                }, 25000);
+            }
+            setInterval(createParticle, 300);
+
+            // Copy visual feedback
+            document.querySelector('.identity-hash').addEventListener('click', function() {
+                this.style.background = 'rgba(76, 175, 80, 0.2)';
+                this.style.borderColor = 'rgba(76, 175, 80, 0.5)';
+                setTimeout(() => {
+                    this.style.background = 'rgba(255, 107, 107, 0.1)';
+                    this.style.borderColor = 'rgba(255, 107, 107, 0.3)';
+                }, 1000);
+            });
+        </script>
+    </body>
+</html>

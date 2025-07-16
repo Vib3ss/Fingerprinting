@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Fingerprinting</title>
+        <meta name="description" content="Favicons as supercookies! Check out this cache-based fingerprinting method in our demonstration."/>
+        <meta name="keywords" content="JavaScript, Web, Fingerprinting, Favicons, Cache, Anonym, Security, Browser"/>
+        <meta name="author" content="Jonas Strehle"/>
+        <meta name="viewport" content="viewport-fit=cover, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+        <link href="/assets/materials-outlined.css" rel="stylesheet">
+        <link href="/assets/refer-v2.css"  rel="stylesheet">
+        <script async defer src="/assets/buttons.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html, body {
+                height: 100%;
+                overflow: hidden;
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+                color: white;
+            }
+
+            .particle-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .particle {
+                position: absolute;
+                width: 2px;
+                height: 2px;
+                background: linear-gradient(45deg, #00f5ff, #ff00ff);
+                border-radius: 50%;
+                animation: float 20s infinite linear;
+                opacity: 0.7;
+            }
+
+            @keyframes float {
+                0% {
+                    transform: translateY(100vh) rotate(0deg);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 1;
+                }
+                90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-100vh) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+
+            .main {
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                padding: 20px;
+            }
+
+            .logo {
+                font-size: 4rem;
+                font-weight: 700;
+                text-align: center;
+                margin-bottom: 2rem;
+                background: linear-gradient(45deg, #00f5ff, #ff00ff, #00ff88);
+                background-size: 300% 300%;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                animation: gradientShift 3s ease-in-out infinite;
+                text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            }
+
+            @keyframes gradientShift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+            }
+
+            .subtitle {
+                font-size: 1.5rem;
+                font-weight: 300;
+                text-align: center;
+                margin-bottom: 3rem;
+                opacity: 0.8;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+            }
+
+            .action-button {
+                position: relative;
+                padding: 18px 40px;
+                font-size: 1.2rem;
+                font-weight: 600;
+                text-decoration: none;
+                color: white;
+                background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+                background-size: 300% 300%;
+                border: none;
+                border-radius: 50px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                animation: buttonPulse 2s ease-in-out infinite;
+            }
+
+            @keyframes buttonPulse {
+                0%, 100% { 
+                    box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+                    transform: translateY(0);
+                }
+                50% { 
+                    box-shadow: 0 15px 40px rgba(255, 0, 110, 0.5);
+                    transform: translateY(-2px);
+                }
+            }
+
+            .action-button:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 50px rgba(255, 0, 110, 0.6);
+                animation: none;
+            }
+
+            .action-button::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .action-button:hover::before {
+                left: 100%;
+            }
+
+            .nav-icons {
+                position: fixed;
+                top: 30px;
+                right: 30px;
+                display: flex;
+                gap: 15px;
+                z-index: 3;
+            }
+
+            .nav-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-decoration: none;
+                color: white;
+                transition: all 0.3s ease;
+            }
+
+            .nav-icon:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: scale(1.1);
+                box-shadow: 0 5px 15px rgba(0, 245, 255, 0.3);
+            }
+
+            .grid-background {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: 
+                    linear-gradient(rgba(0, 245, 255, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 245, 255, 0.1) 1px, transparent 1px);
+                background-size: 50px 50px;
+                animation: gridMove 20s linear infinite;
+                z-index: 0;
+            }
+
+            @keyframes gridMove {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(50px, 50px); }
+            }
+
+            .footer {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                z-index: 3;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 15px 25px;
+                border-radius: 25px;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .footer-text {
+                font-size: 0.9rem;
+                opacity: 0.8;
+            }
+
+            .github-button {
+                color: white !important;
+                text-decoration: none !important;
+            }
+
+            @media (max-width: 768px) {
+                .logo {
+                    font-size: 2.5rem;
+                }
+                .subtitle {
+                    font-size: 1.2rem;
+                }
+                .footer {
+                    display: none;
+                }
+                .nav-icons {
+                    top: 20px;
+                    right: 20px;
+                }
+            }
+        </style>
+    </head>
+    
+    <body>
+        <div class="grid-background"></div>
+        
+        <div class="particle-container" id="particles"></div>
+        <div class="main">
+            <h1 class="logo">Favicon</h1>
+            <div class="subtitle">Browser Fingerprinting via Favicon</div>
+            
+            <a class="action-button" href="//{{url_demo}}">
+                <span class="material-icons-outlined">visibility</span>
+                Launch Demo
+            </a>
+        </div>
+
+        <script>
+            // Create floating particles
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+                document.getElementById('particles').appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 25000);
+            }
+
+            // Generate particles continuously
+            setInterval(createParticle, 300);
+        </script>
+    </body>
+</html>

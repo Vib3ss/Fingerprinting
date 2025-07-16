@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Fingerprinting progress</title>
+        <meta name="author" content="Jonas Strehle"/>
+        <meta name="robots" content="noindex"/>
+        <meta name="viewport" content="viewport-fit=cover, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+        <link href="/assets/refer-v2.css" rel="stylesheet">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html, body {
+                height: 100%;
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+                color: white;
+                overflow: hidden;
+            }
+
+            /* Grid background (neon lines) */
+            .grid-background {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image:
+                    linear-gradient(rgba(0, 245, 255, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 245, 255, 0.1) 1px, transparent 1px);
+                background-size: 50px 50px;
+                animation: gridMove 20s linear infinite;
+                z-index: 0;
+            }
+            @keyframes gridMove {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(50px, 50px); }
+            }
+
+            /* Particle overlay */
+            .particle-field {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .particle {
+                position: absolute;
+                width: 3px;
+                height: 3px;
+                background: linear-gradient(45deg, #00f5ff, #ff00ff);
+                border-radius: 50%;
+                animation: particleFloat 15s infinite linear;
+                opacity: 0.7;
+            }
+            .particle:nth-child(odd) {
+                animation-duration: 12s;
+            }
+            .particle:nth-child(3n) {
+                animation-duration: 18s;
+            }
+            @keyframes particleFloat {
+                0% {
+                    transform: translateY(100vh) rotate(0deg);
+                    opacity: 0;
+                }
+                10%, 90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-100vh) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+
+            /* Main container centered */
+            .container {
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .main-title {
+                font-size: 3rem;
+                font-weight: 600;
+                margin-bottom: 20px;
+                background: linear-gradient(45deg, #00f5ff, #ff00ff, #00ff88);
+                background-size: 300% 300%;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: gradientShift 3s ease-in-out infinite;
+                text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            }
+            @keyframes gradientShift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+            }
+
+            .subtitle {
+                font-size: 1.2rem;
+                font-weight: 300;
+                margin-bottom: 30px;
+                opacity: 0.8;
+                animation: subtitlePulse 2s ease-in-out infinite;
+            }
+            @keyframes subtitlePulse {
+                0%, 100% { opacity: 0.6; }
+                50% { opacity: 1; }
+            }
+
+            /* Loading spinner */
+            .loading-spinner {
+                width: 60px;
+                height: 60px;
+                border: 3px solid rgba(255, 255, 255, 0.1);
+                border-top: 3px solid #00f5ff;
+                border-radius: 50%;
+                animation: spinnerRotate 1s linear infinite;
+                margin: 0 auto 20px;
+            }
+            @keyframes spinnerRotate {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            /* Progress bar */
+            .progress-container {
+                width: 300px;
+                margin: 0 auto 30px;
+                position: relative;
+            }
+            .progress-track {
+                width: 100%;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
+                overflow: hidden;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .progress-fill {
+                width: 0%;
+                height: 100%;
+                background: linear-gradient(90deg, #00f5ff, #ff00ff, #00ff88);
+                background-size: 300% 100%;
+                border-radius: 4px;
+                animation: fillBar 3s ease-out forwards, glowBar 2s ease-in-out infinite;
+            }
+            @keyframes fillBar {
+                0% { width: 0%; }
+                100% { width: 100%; }
+            }
+            @keyframes glowBar {
+                0%, 100% {
+                    box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+                    background-position: 0% 50%;
+                }
+                50% {
+                    box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+                    background-position: 100% 50%;
+                }
+            }
+
+            /* Countdown */
+            .countdown {
+                font-size: 4rem;
+                font-weight: 600;
+                margin: 20px 0;
+                color: #00f5ff;
+                text-shadow: 0 0 20px rgba(0, 245, 255, 0.8);
+                animation: countdownPulse 1s ease-in-out infinite;
+            }
+            @keyframes countdownPulse {
+                0%, 100% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.1); opacity: 1; }
+            }
+
+            /* Status message */
+            .status-message {
+                font-size: 1rem;
+                color: rgba(255, 255, 255, 0.7);
+                margin-top: 30px;
+                animation: statusPulse 3s ease-in-out infinite;
+            }
+            @keyframes statusPulse {
+                0%, 100% { opacity: 0.5; }
+                50% { opacity: 1; }
+            }
+
+            @media (max-width: 768px) {
+                .main-title { font-size: 2.5rem; }
+                .countdown { font-size: 3rem; }
+                .progress-container { width: 250px; }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="grid-background"></div>
+        <div class="particle-field" id="particleField"></div>
+
+        <div class="container">
+            <h1 class="main-title">Processing Complete</h1>
+            <div class="subtitle">Redirecting to demonstration</div>
+
+            <div class="loading-spinner"></div>
+
+            <div class="progress-container">
+                <div class="progress-track">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="countdown" id="countdown">3</div>
+            <div class="status-message">Please wait while we prepare your demo...</div>
+        </div>
+
+        <script type="module">
+            // Create particle field (unchanged functionality) :contentReference[oaicite:0]{index=0}
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                document.getElementById('particleField').appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 15000);
+            }
+            setInterval(createParticle, 200);
+
+            // Countdown timer (unchanged functionality)
+            let count = 3;
+            const countdownElement = document.getElementById('countdown');
+            const countdownInterval = setInterval(() => {
+                count--;
+                countdownElement.textContent = count;
+                if (count <= 0) {
+                    countdownElement.textContent = '🚀';
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+
+            // Redirect logic (unchanged functionality)
+            window.onload = () => {
+                setTimeout(() => {
+                    window.location.href = "//{{url_demo}}";
+                }, 3000);
+            };
+        </script>
+    </body>
+</html>

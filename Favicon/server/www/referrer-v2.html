@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fingerprinting {{index}}</title>
+  <meta name="author" content="Jonas Strehle" />
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="viewport-fit=cover, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1" />
+  <link href="/assets/refer-v2.css" rel="stylesheet" />
+  <style>
+    /* Base reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      background-size: 400% 400%;
+      animation: gradientShift 10s ease-in-out infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+
+    /* Container for content */
+    .container {
+      position: relative;
+      text-align: center;
+      color: #ffffff;
+      z-index: 2;
+      padding: 2rem 3rem;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Title styling */
+    .main-title {
+      font-size: 3.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(45deg, #00f5ff, #00ff88, #ffff00);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      animation: titleGradient 4s ease-in-out infinite;
+    }
+    @keyframes titleGradient {
+      0%, 100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+
+    /* Loader section */
+    .loader {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .hexagon-loader {
+      width: 50px;
+      height: 50px;
+      position: relative;
+    }
+    .hexagon {
+      width: 100%;
+      height: 100%;
+      border: 3px solid transparent;
+      border-top: 3px solid #00f5ff;
+      border-right: 3px solid #00ff88;
+      border-bottom: 3px solid #ffff00;
+      transform: rotate(45deg);
+      animation: hexagonRotate 2s linear infinite;
+    }
+    @keyframes hexagonRotate {
+      0%   { transform: rotate(45deg); }
+      100% { transform: rotate(405deg); }
+    }
+    .wave-dots {
+      display: flex;
+      gap: 8px;
+    }
+    .wave-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #00f5ff, #00ff88);
+      animation: waveMotion 1.2s ease-in-out infinite;
+    }
+    .wave-dot:nth-child(2) { animation-delay: 0.1s; }
+    .wave-dot:nth-child(3) { animation-delay: 0.2s; }
+    .wave-dot:nth-child(4) { animation-delay: 0.3s; }
+    .wave-dot:nth-child(5) { animation-delay: 0.4s; }
+    @keyframes waveMotion {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+      50%      { transform: translateY(-15px) scale(1.2); opacity: 1; }
+    }
+
+    /* Status text */
+    .status-message {
+      font-size: 1rem;
+      margin-top: 1.5rem;
+      color: rgba(255, 255, 255, 0.8);
+      animation: statusPulse 3s ease-in-out infinite;
+    }
+    @keyframes statusPulse {
+      0%, 100% { opacity: 0.5; }
+      50%      { opacity: 1; }
+    }
+
+    /* Particle field (background) */
+    .particle-field {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(0, 245, 255, 0.6);
+      border-radius: 50%;
+      animation: particleFloat 12s infinite linear;
+    }
+    .particle:nth-child(odd) {
+      background: rgba(0, 255, 136, 0.6);
+      animation-duration: 15s;
+    }
+    .particle:nth-child(3n) {
+      background: rgba(255, 255, 0, 0.6);
+      animation-duration: 10s;
+    }
+    @keyframes particleFloat {
+      0% {
+        transform: translateY(100vh) translateX(0) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100vh) translateX(100px) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* Bit indicator badge */
+    .bit-indicator {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.8);
+      animation: bitGlow 2s ease-in-out infinite;
+      z-index: 2;
+    }
+    @keyframes bitGlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 245, 255, 0.3); }
+      50%      { transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 255, 136, 0.6); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 2.5rem;
+      }
+      .hexagon-loader {
+        width: 40px;
+        height: 40px;
+      }
+      .wave-dot {
+        width: 10px;
+        height: 10px;
+      }
+      .bit-indicator {
+        top: 12px;
+        right: 12px;
+        padding: 6px 12px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Particle background layer -->
+  <div class="particle-field" id="particleField"></div>
+
+  <!-- Bit-version badge -->
+  <div class="bit-indicator">bit v2</div>
+
+  <!-- Main content container -->
+  <div class="container">
+    <!-- Modern gradient‐clipped title -->
+    <h1 class="main-title">{{index}}</h1>
+
+    <!-- Loader animation -->
+    <div class="loader">
+      <div class="hexagon-loader">
+        <div class="hexagon"></div>
+      </div>
+      <div class="wave-dots">
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+      </div>
+    </div>
+
+    <!-- Status text below loader -->
+    <div class="status-message">Preloading favicon cache...</div>
+  </div>
+
+  <script>
+    // Particle generation (non-blocking)
+    function createParticle() {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.animationDelay = Math.random() * 12 + 's';
+      const field = document.getElementById('particleField');
+      if (field) {
+        field.appendChild(particle);
+        setTimeout(() => {
+          if (particle.parentNode) {
+            particle.remove();
+          }
+        }, 15000);
+      }
+    }
+    // Generate a new particle every 200ms
+    setInterval(createParticle, 200);
+  </script>
+
+  <!-- KEEP THIS SCRIPT EXACTLY AS-IS -->
+  <script type="module">
+    console.info(`{{index}} • bit v2`, JSON.parse("{{bit}}"));
+    if (JSON.parse("{{bit}}"))
+      document.location.href = `${document.location.origin}/{{referrer}}`;
+    const favicon = document.createElement('link');
+    favicon.rel = "icon preload";
+    favicon.as = "image";
+    favicon.type = "image/x-icon";
+    favicon.onload = favicon.onerror = () =>
+      document.location.href = `${document.location.origin}/{{referrer}}`;
+    document.head.appendChild(favicon);
+    globalThis.f = favicon;
+    favicon.href = `//${window.location.host}/f/{{favicon}}`;
+  </script>
+</body>
+</html>
