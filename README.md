@@ -19,6 +19,36 @@ This project enhances and expands the fingerprinting capabilities from existing 
 
 ---
 
+## 📢 Presented & Accepted At
+
+This research and its variants have been accepted at several leading security conferences:
+
+### ✅ **Accepted Talks**
+
+* 🛡️ **VulnCon 2025**
+  *\[Reinventing Access Control – Fingerprinting for Credential Protection]*
+  🔗 [View Talk](https://vulncon.in/events/vulncon2025/talks/reinventing-access-control)
+
+* 🔓 **BSides Mumbai 2025**
+  🔗 [Speaker Profile](https://www.bsidesmumbai.in/speakers)
+
+---
+
+### 🏆 Also Accepted At
+
+> *(Similar or extended versions of this work)*
+
+* **Nullcon Goa**
+* **Black Hat (MEA, USA submission)**
+* **HackRed-Con**
+* **BSides Bloomington**
+* **BSides Sydney**
+* **BSides Connecticut**
+
+---
+
+---
+
 ## Project Structure
 
 ```
