@@ -39,7 +39,7 @@ This research and its variants have been accepted at several leading security co
 > *(Similar or extended versions of this work)*
 
 * **Nullcon Goa**
-* **Black Hat (MEA, USA submission)**
+* **Black Hat MEA**
 * **HackRed-Con**
 * **BSides Bloomington**
 * **BSides Sydney**
